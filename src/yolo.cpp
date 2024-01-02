@@ -157,7 +157,7 @@ Yolo::Yolo(const std::string& modelPath){
     std::cout<<"Model Ready!"<<std::endl;
 }
 
-std::vector<YoloResult> Yolo::ProcessImage(cv::Mat& img){
+std::vector<YoloResult> Yolo::ProcessImage(const cv::Mat img){
     // std::cout<<"Img received"<<std::endl;
     cv::Mat newImage;
     const bool& auto_=false;
@@ -185,7 +185,13 @@ std::vector<YoloResult> Yolo::ProcessImage(cv::Mat& img){
     cv::Mat output0 = cv::Mat(cv::Size((int)output0TensorShape[2], (int)output0TensorShape[1]), CV_32F, all_data).t();
     std::vector<int> maskSize = { 1,(int)output1TensorShape[1],(int)output1TensorShape[2],(int)output1TensorShape[3] };
     cv::Mat output1 = cv::Mat(maskSize, CV_32F, outputTensors[1].GetTensorMutableData<float>());
-    
+    std::cout<<output1.cols<<" "<<output1.rows<<std::endl;
+    std::cout<<output0.size()<<std::endl;
+    std::cout<<output1.size()<<std::endl;
+    std::vector<YoloResult> output;
+    // if(output1.rows<=0||output1.cols<=0){
+    //     return output;
+    // }
     int maskFeaturesNum = output1TensorShape[1];
     int maskW = output1TensorShape[2];
     int maskH = output1TensorShape[3];
@@ -199,7 +205,7 @@ std::vector<YoloResult> Yolo::ProcessImage(cv::Mat& img){
     int rows = output0.rows;    
     float* pdata = (float*)output0.data;
    
-    // std::cout<<"PostProcess"<<std::endl;
+    // std::cout<<"PostProcess "<<rows<<std::endl;
     for(int r = 0; r<rows; r++){
         cv::Mat scores(1, classNamesNum, CV_32FC1, pdata+4);
         cv::Point classId;
@@ -225,22 +231,27 @@ std::vector<YoloResult> Yolo::ProcessImage(cv::Mat& img){
     // std::cout<<"NMS"<<std::endl;
     std::vector<int> nmsResult;
     cv::dnn::NMSBoxes(boxes, confidences, _classTreshold, _nmsTreshold, nmsResult);
-
     cv::Size downsampledSize = cv::Size(maskW, maskH);
+    std::cout<<maskW<<" "<<maskH<<std::endl;
+    std::cout<<output1.cols<<" "<<output1.rows<<std::endl;
     std::vector<cv::Range> roiRangs = { cv::Range(0, 1), cv::Range::all(),
                                          cv::Range(0, downsampledSize.height), cv::Range(0, downsampledSize.width) };
     cv::Mat tempMask = output1(roiRangs).clone();
+    // std::cout<<"2"<<std::endl;
     cv::Mat proto = tempMask.reshape(0, { maskFeaturesNum, downsampledSize.width * downsampledSize.height });
-    std::vector<YoloResult> output;
+    // std::cout<<"3"<<std::endl;
     for (int i = 0; i < nmsResult.size(); ++i)
     {
+        std::cout<<i<<std::endl;
         int idx = nmsResult[i];
         boxes[idx] = boxes[idx] & cv::Rect(0, 0, img.cols, img.rows);
         YoloResult result = { classIds[idx] ,confidences[idx] ,boxes[idx] };
         GetMask(cv::Mat(masks[idx]).t(), proto, img.cols, img.rows, boxes[idx], result.mask,
             _netWidth, _netHeight, maskW, maskH, maskFeaturesNum);
+        // std::cout<<i<<"1"<<std::endl;
         output.push_back(result);
     }
+    // std::cout<<"done"<<std::endl;
     return output;
 }
 
@@ -277,7 +288,7 @@ void Yolo::GetMask(const cv::Mat &masks_features, const cv::Mat& proto, int imWi
     mask_out = mask_out(bound) > _maskTreshold;
 }
 
-cv::Mat Yolo::DrawImage(std::vector<YoloResult> results, cv::Mat& img){
+cv::Mat Yolo::DrawImage(std::vector<YoloResult> results, const cv::Mat img){
     cv::Mat mask = img.clone()*0.0;
 
     // int radius = 5;
@@ -313,6 +324,8 @@ cv::Mat Yolo::DrawImage(std::vector<YoloResult> results, cv::Mat& img){
 
     // Combine the image and mask
     // cv::addWeighted(img, 0.6, mask, 0.4, 0, img);
+
+    cvtColor(mask,mask,cv::COLOR_BGR2GRAY);
     return mask;
 }
 

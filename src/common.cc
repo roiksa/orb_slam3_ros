@@ -13,7 +13,7 @@ ORB_SLAM3::System::eSensor sensor_type = ORB_SLAM3::System::NOT_SET;
 // Variables for ROS
 std::string world_frame_id, cam_frame_id, imu_frame_id;
 ros::Publisher pose_pub, odom_pub, kf_markers_pub;
-ros::Publisher tracked_mappoints_pub, all_mappoints_pub;
+ros::Publisher tracked_mappoints_pub, tracked_personpoints_pub, all_mappoints_pub;
 image_transport::Publisher tracking_img_pub;
 
 //////////////////////////////////////////////////
@@ -79,6 +79,26 @@ void setup_publishers(ros::NodeHandle &node_handler, image_transport::ImageTrans
     }
 }
 
+void setup_publishers_seg(ros::NodeHandle &node_handler, image_transport::ImageTransport &image_transport, std::string node_name)
+{
+    pose_pub = node_handler.advertise<geometry_msgs::PoseStamped>(node_name + "/camera_pose", 1);
+
+    tracked_mappoints_pub = node_handler.advertise<sensor_msgs::PointCloud2>(node_name + "/tracked_points", 1);
+    
+    tracked_personpoints_pub = node_handler.advertise<sensor_msgs::PointCloud2>(node_name + "/person_points", 1);
+
+    all_mappoints_pub = node_handler.advertise<sensor_msgs::PointCloud2>(node_name + "/all_points", 1);
+
+    tracking_img_pub = image_transport.advertise(node_name + "/tracking_image", 1);
+
+    kf_markers_pub = node_handler.advertise<visualization_msgs::Marker>(node_name + "/kf_markers", 1000);
+
+    if (sensor_type == ORB_SLAM3::System::IMU_MONOCULAR || sensor_type == ORB_SLAM3::System::IMU_STEREO || sensor_type == ORB_SLAM3::System::IMU_RGBD)
+    {
+        odom_pub = node_handler.advertise<nav_msgs::Odometry>(node_name + "/body_odom", 1);
+    }
+}
+
 void publish_topics(ros::Time msg_time, Eigen::Vector3f Wbb)
 {
     Sophus::SE3f Twc = pSLAM->GetCamTwc();
@@ -92,6 +112,39 @@ void publish_topics(ros::Time msg_time, Eigen::Vector3f Wbb)
 
     publish_tracking_img(pSLAM->GetCurrentFrame(), msg_time);
     publish_tracked_points(pSLAM->GetTrackedMapPoints(), msg_time);
+    publish_all_points(pSLAM->GetAllMapPoints(), msg_time);
+    publish_kf_markers(pSLAM->GetAllKeyframePoses(), msg_time);
+
+    // IMU-specific topics
+    if (sensor_type == ORB_SLAM3::System::IMU_MONOCULAR || sensor_type == ORB_SLAM3::System::IMU_STEREO || sensor_type == ORB_SLAM3::System::IMU_RGBD)
+    {
+        // Body pose and translational velocity can be obtained from ORB-SLAM3
+        Sophus::SE3f Twb = pSLAM->GetImuTwb();
+        Eigen::Vector3f Vwb = pSLAM->GetImuVwb();
+
+        // IMU provides body angular velocity in body frame (Wbb) which is transformed to world frame (Wwb)
+        Sophus::Matrix3f Rwb = Twb.rotationMatrix();
+        Eigen::Vector3f Wwb = Rwb * Wbb;
+
+        publish_tf_transform(Twb, world_frame_id, imu_frame_id, msg_time);
+        publish_body_odom(Twb, Vwb, Wwb, msg_time);
+    }
+}
+
+void publish_topics_seg(ros::Time msg_time, cv::Mat mask, Eigen::Vector3f Wbb)
+{
+    Sophus::SE3f Twc = pSLAM->GetCamTwc();
+
+    if (Twc.translation().array().isNaN()[0] || Twc.rotationMatrix().array().isNaN()(0,0)) // avoid publishing NaN
+        return;
+    
+    // Common topics
+    publish_camera_pose(Twc, msg_time);
+    publish_tf_transform(Twc, world_frame_id, cam_frame_id, msg_time);
+
+    publish_tracking_img(pSLAM->GetCurrentFrame(), msg_time);
+    publish_tracked_points(pSLAM->GetTrackedMapPoints(), msg_time);
+    publish_person_points(pSLAM->Cobain(mask), msg_time);
     publish_all_points(pSLAM->GetAllMapPoints(), msg_time);
     publish_kf_markers(pSLAM->GetAllKeyframePoses(), msg_time);
 
@@ -183,6 +236,15 @@ void publish_tracked_points(std::vector<ORB_SLAM3::MapPoint*> tracked_points, ro
     sensor_msgs::PointCloud2 cloud = mappoint_to_pointcloud(tracked_points, msg_time);
     
     tracked_mappoints_pub.publish(cloud);
+}
+
+void publish_person_points(std::vector<ORB_SLAM3::MapPoint*> person_points, ros::Time msg_time)
+{
+    
+    // std::cout<<"disini gitu?"<<std::endl;
+    sensor_msgs::PointCloud2 cloud = mappoint_to_pointcloud(person_points, msg_time);
+    // std::cout<<"iya disitu?"<<std::endl;
+    tracked_personpoints_pub.publish(cloud);
 }
 
 void publish_all_points(std::vector<ORB_SLAM3::MapPoint*> map_points, ros::Time msg_time)

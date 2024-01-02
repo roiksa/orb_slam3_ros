@@ -37,6 +37,7 @@ endif()
 
 MESSAGE("OPENCV VERSION:")
 MESSAGE(${OpenCV_VERSION})
+SET (ONNXRUNTIME_DIR /home/benyamin/onnxrt/onnxruntime/build/Linux/Release)  # onnxruntime root
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -123,7 +124,6 @@ add_library(${PROJECT_NAME} SHARED
   orb_slam3/src/TwoViewReconstruction.cc
   orb_slam3/src/Config.cc
   orb_slam3/src/Settings.cc
-  orb_slam3/src/Yolo.cc
   orb_slam3/include/System.h
   orb_slam3/include/Tracking.h
   orb_slam3/include/LocalMapping.h
@@ -169,71 +169,73 @@ target_link_libraries(${PROJECT_NAME}
 
 ## ROS node Yolo
 add_executable(ros_mono_yolo
-  src/ros_mono.cc
+  src/ros_mono_yolo.cc
   src/common.cc
-  src/yolo.cc
+  src/yolo.cpp
 )
-target_link_libraries(ros_mono
+TARGET_INCLUDE_DIRECTORIES(ros_mono_yolo PRIVATE "${ONNXRUNTIME_DIR}/include")
+target_link_libraries(ros_mono_yolo
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
+  "${ONNXRUNTIME_DIR}/libonnxruntime.so"
 )
 
-## ROS node
-add_executable(ros_mono
-src/ros_mono.cc
-src/common.cc
-)
-target_link_libraries(ros_mono
-${PROJECT_NAME}
-${catkin_LIBRARIES}
-)
+# ## ROS node
+# add_executable(ros_mono
+# src/ros_mono.cc
+# src/common.cc
+# )
+# target_link_libraries(ros_mono
+# ${PROJECT_NAME}
+# ${catkin_LIBRARIES}
+# )
 
-## ROS node
-add_executable(ros_mono_inertial 
-  src/ros_mono_inertial.cc
-  src/common.cc
-)
-target_link_libraries(ros_mono_inertial 
-  ${PROJECT_NAME}
-  ${catkin_LIBRARIES}
-)
+# ## ROS node
+# add_executable(ros_mono_inertial 
+#   src/ros_mono_inertial.cc
+#   src/common.cc
+# )
+# target_link_libraries(ros_mono_inertial 
+#   ${PROJECT_NAME}
+#   ${catkin_LIBRARIES}
+# )
 
-## ROS node
-add_executable(ros_stereo 
-  src/ros_stereo.cc
-  src/common.cc
-)
-target_link_libraries(ros_stereo
-  ${PROJECT_NAME}
-  ${catkin_LIBRARIES}
-)
+# ## ROS node
+# add_executable(ros_stereo 
+#   src/ros_stereo.cc
+#   src/common.cc
+# )
+# target_link_libraries(ros_stereo
+#   ${PROJECT_NAME}
+#   ${catkin_LIBRARIES}
+# )
 
-## ROS node
-add_executable(ros_stereo_inertial
-  src/ros_stereo_inertial.cc
-  src/common.cc
-)
-target_link_libraries(ros_stereo_inertial 
-  ${PROJECT_NAME}
-  ${catkin_LIBRARIES}
-)
+# ## ROS node
+# add_executable(ros_stereo_inertial
+#   src/ros_stereo_inertial.cc
+#   src/common.cc
+# )
+# target_link_libraries(ros_stereo_inertial 
+#   ${PROJECT_NAME}
+#   ${catkin_LIBRARIES}
+# )
 
-## ROS node
-add_executable(ros_rgbd
-  src/ros_rgbd.cc
-  src/common.cc
-)
-target_link_libraries(ros_rgbd
-  ${PROJECT_NAME}
-  ${catkin_LIBRARIES}
-)
+# ## ROS node
+# add_executable(ros_rgbd
+#   src/ros_rgbd.cc
+#   src/common.cc
+# )
+# target_link_libraries(ros_rgbd
+#   ${PROJECT_NAME}
+#   ${catkin_LIBRARIES}
+# )
 
-## ROS node
-add_executable(ros_rgbd_inertial
-  src/ros_rgbd_inertial.cc
-  src/common.cc
-)
-target_link_libraries(ros_rgbd_inertial
-  ${PROJECT_NAME}
-  ${catkin_LIBRARIES}
-)
+# ## ROS node
+# add_executable(ros_rgbd_inertial
+#   src/ros_rgbd_inertial.cc
+#   src/common.cc
+# )
+# target_link_libraries(ros_rgbd_inertial
+#   ${PROJECT_NAME}
+#   ${catkin_LIBRARIES}
+# )

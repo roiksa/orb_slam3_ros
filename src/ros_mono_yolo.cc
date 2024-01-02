@@ -14,34 +14,35 @@ Yolo* yoloHandler;
 class YoloNode{
     public:
         YoloNode(ros::NodeHandle *nodeHandler, image_transport::ImageTransport *itHandler){
+            ROS_INFO("Initiating Node");
+
             std::string node_name = ros::this_node::getName();
             std::string voc_file, settings_file;
-            node_handler.param<std::string>(node_name + "/voc_file", voc_file, "file_not_set");
-            node_handler.param<std::string>(node_name + "/settings_file", settings_file, "file_not_set");
+            nodeHandler->param<std::string>(node_name + "/voc_file", voc_file, "file_not_set");
+            nodeHandler->param<std::string>(node_name + "/settings_file", settings_file, "file_not_set");
 
             if (voc_file == "file_not_set" || settings_file == "file_not_set")
             {
                 ROS_ERROR("Please provide voc_file and settings_file in the launch file");       
-                ros::shutdown();
-                return 1;
+                ros::shutdown();    
             }
 
-            node_handler.param<std::string>(node_name + "/world_frame_id", world_frame_id, "map");
-            node_handler.param<std::string>(node_name + "/cam_frame_id", cam_frame_id, "camera");
+            nodeHandler->param<std::string>(node_name + "/world_frame_id", world_frame_id, "map");
+            nodeHandler->param<std::string>(node_name + "/cam_frame_id", cam_frame_id, "camera");
 
             bool enable_pangolin;
-            node_handler.param<bool>(node_name + "/enable_pangolin", enable_pangolin, true);
+            nodeHandler->param<bool>(node_name + "/enable_pangolin", enable_pangolin, true);
 
-            yoloHandler = new Yolo("/home/benyamin/YoloCpp/yolov8-ros/src/yolov8seg-ros/yolov8m-seg.onnx");
+            yoloHandler = new Yolo("/home/benyamin/catkin_ws/src/orb_slam3_ros/yolov8m-seg.onnx");
 
             // Create SLAM system. It initializes all system threads and gets ready to process frames.
             sensor_type = ORB_SLAM3::System::MONOCULAR;
             pSLAM = new ORB_SLAM3::System(voc_file, settings_file, sensor_type, enable_pangolin);
 
-            imgSub = nodeHandler.subscribe("/camera/image_raw", 1, &YoloNode::ImgCallback, this);
+            imgSub = nodeHandler->subscribe("/camera/image_raw", 1, &YoloNode::ImgCallback, this);
 
-            setup_publishers(node_handler, image_transport, node_name);
-            setup_services(node_handler, node_name);
+            setup_publishers_seg(*nodeHandler, *itHandler, node_name);
+            setup_services(*nodeHandler, node_name);
             resPub = itHandler->advertise("/seg_image",1);
         }
     
@@ -50,23 +51,27 @@ class YoloNode{
         image_transport::Publisher resPub;
 
         void ImgCallback(const sensor_msgs::ImageConstPtr& msg){
+            cv_bridge::CvImageConstPtr cv_ptr;
             try{
-                cv::Mat img = cv_bridge::toCvShare(msg,"bgr8")->image;
-            }catch(cv_bridge::Exception e){
+                cv_ptr = cv_bridge::toCvShare(msg);
+            }
+            catch(cv_bridge::Exception e){
                 ROS_ERROR("cv_bridge exception: %s", e.what());
                 return;
             }
-
-            std::vector<YoloResult> result = yoloHandler->ProcessImage(img);
-            cv::Mat resImg = yoloHandler->DrawImage(result, img);
-            sensor_msgs::ImagePtr resImgMsg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", resImg).toImageMsg();
+            // std::cout<<"processing"<<std::endl;
+            std::vector<YoloResult> result = yoloHandler->ProcessImage(cv_ptr->image);
+            std::cout<<result.size()<<std::endl;
+            cv::Mat mask = yoloHandler->DrawImage(result, cv_ptr->image);
+            // std::cout<<"mask created"<<std::endl;
+            sensor_msgs::ImagePtr resImgMsg = cv_bridge::CvImage(std_msgs::Header(), "mono8", mask).toImageMsg();
             resPub.publish(resImgMsg);
 
             Sophus::SE3f Tcw = pSLAM->TrackMonocular(cv_ptr->image, cv_ptr->header.stamp.toSec());
-
+            // std::cout<<"tracking"<<std::endl;
             ros::Time msg_time = msg->header.stamp;
-
-            publish_topics(msg_time);
+            publish_topics_seg(msg_time, mask);
+            // std::cout<<"publishing"<<std::endl;
         }
 };
 

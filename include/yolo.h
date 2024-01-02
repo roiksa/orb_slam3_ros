@@ -1,6 +1,7 @@
 #include <iostream>
 #include <memory>
 #include <opencv2/opencv.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <numeric>
 #include <time.h>
 #include <onnxruntime_cxx_api.h>
@@ -24,8 +25,8 @@ void letterbox(const cv::Mat& image,
 class Yolo{
     public: 
         Yolo(const std::string& modelPath);
-        std::vector<YoloResult> ProcessImage(cv::Mat& img);
-        cv::Mat DrawImage(std::vector<YoloResult> result, cv::Mat& img);
+        std::vector<YoloResult> ProcessImage(const cv::Mat img);
+        cv::Mat DrawImage(std::vector<YoloResult> result, const cv::Mat img);
 
         std::vector<std::string> _className = {
 		"person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",

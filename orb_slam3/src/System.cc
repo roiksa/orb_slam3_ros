@@ -449,6 +449,8 @@ Sophus::SE3f System::TrackMonocular(const cv::Mat &im, const double &timestamp, 
     mTrackingState = mpTracker->mState;
     mTrackedMapPoints = mpTracker->mCurrentFrame.mvpMapPoints;
     mTrackedKeyPointsUn = mpTracker->mCurrentFrame.mvKeysUn;
+    mTrackedKeyPoints = mpTracker->mCurrentFrame.mvKeys;
+    mOutlierPoints = mpTracker->mCurrentFrame.mvbOutlier;
 
     return Tcw;
 }
@@ -1604,6 +1606,43 @@ bool System::SaveMap(const string &filename)
         return SaveAtlas(FileType::BINARY_FILE);
     }
     return false;
+}
+
+std::vector<MapPoint*> System::Cobain(cv::Mat mask){
+    std::vector<MapPoint*> personMPs;
+    // mTrackedMapPoints;
+    // mTrackedKeyPoints;
+    // mOutlierPoints;
+    float imageScale = GetImageScale();
+    // std::cout<<"1"<<std::endl;
+
+    int bMask[mask.rows][mask.cols];
+    for (int i=0;i<mask.rows;i++){
+        for (int j=0;j<mask.cols;j++){
+            bMask[i][j]= (int)mask.at<uchar>(i,j);
+        }
+    }
+
+    if(mTrackingState==Tracking::OK){
+        for (int i = 0; i < mTrackedKeyPoints.size(); i++){
+            MapPoint* pMP = mTrackedMapPoints[i];
+            if(pMP){
+                std::cout<<mOutlierPoints[i]<<std::endl;
+                if(!mOutlierPoints[i]){
+                    int px = (int)(mTrackedKeyPoints[i].pt.x / imageScale);
+                    int py = (int)(mTrackedKeyPoints[i].pt.y / imageScale);
+                    // std::cout<<px<<","<<py<<std::endl;
+                    // std::cout<<mask.size()<<std::endl;
+                    // std::cout<<bMask[py][px]<<std::endl;
+
+                    if(bMask[py][px]!=0){
+                        personMPs.push_back(mTrackedMapPoints[i]);
+                    }
+                }
+            }
+        }
+    }
+    return personMPs;
 }
 
 } //namespace ORB_SLAM

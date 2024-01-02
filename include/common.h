@@ -44,11 +44,14 @@ extern image_transport::Publisher tracking_img_pub;
 
 void setup_services(ros::NodeHandle&, std::string);
 void setup_publishers(ros::NodeHandle&, image_transport::ImageTransport&, std::string);
+void setup_publishers_seg(ros::NodeHandle&, image_transport::ImageTransport&, std::string);
 void publish_topics(ros::Time, Eigen::Vector3f = Eigen::Vector3f::Zero());
+void publish_topics_seg(ros::Time, cv::Mat mask, Eigen::Vector3f = Eigen::Vector3f::Zero());
 
 void publish_camera_pose(Sophus::SE3f, ros::Time);
 void publish_tracking_img(cv::Mat, ros::Time);
 void publish_tracked_points(std::vector<ORB_SLAM3::MapPoint*>, ros::Time);
+void publish_person_points(std::vector<ORB_SLAM3::MapPoint*>, ros::Time);
 void publish_all_points(std::vector<ORB_SLAM3::MapPoint*>, ros::Time);
 void publish_tf_transform(Sophus::SE3f, string, string, ros::Time);
 void publish_body_odom(Sophus::SE3f, Eigen::Vector3f, Eigen::Vector3f, ros::Time);

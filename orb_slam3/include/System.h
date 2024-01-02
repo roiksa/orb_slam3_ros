@@ -194,6 +194,7 @@ public:
     void ChangeDataset();
 
     float GetImageScale();
+    std::vector<MapPoint*> Cobain(cv::Mat mask);
 
 #ifdef REGISTER_TIMES
     void InsertRectTime(double& time);
@@ -262,6 +263,8 @@ private:
     int mTrackingState;
     std::vector<MapPoint*> mTrackedMapPoints;
     std::vector<cv::KeyPoint> mTrackedKeyPointsUn;
+    std::vector<cv::KeyPoint> mTrackedKeyPoints;
+    std::vector<bool> mOutlierPoints;
     std::mutex mMutexState;
 
     //
