@@ -16,9 +16,9 @@ sudo add-apt-repository "deb http://developer.download.nvidia.com/compute/cuda/r
 sudo apt update
 sudo apt install cuda-toolkit-11-8
 
-sudo apt install libcudnn8=*-1+cuda${CUDA_VERSION}
-sudo apt-get install libcudnn8-dev=*-1+cuda${CUDA_VERSION}
-sudo apt-get install libcudnn8-samples=*-1+cuda${CUDA_VERSION}
+sudo apt install libcudnn8=*-1+cuda11.8
+sudo apt-get install libcudnn8-dev=*-1+cuda11.8
+sudo apt-get install libcudnn8-samples=*-1+cuda11.8
 
 
 
@@ -29,6 +29,11 @@ cd onnxruntime
 ./build.sh --config Release --build_shared-lib --use_cuda --cuda_home /usr/local/cuda --cudnn_home /usr/lib/x86_64-linux-gnu/ --parallel
 ##extract include.zip ke onnxruntime/build/Linux/Release
 
-Ubah CMakeList Onnxruntime root
+
+Ubah CMakeList Onnxruntime root, ubah juga lokasi model di ros_mono_yolo.cc
+Abis itu
+
+
+catkin build
 
 

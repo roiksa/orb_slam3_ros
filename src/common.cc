@@ -144,7 +144,8 @@ void publish_topics_seg(ros::Time msg_time, cv::Mat mask, Eigen::Vector3f Wbb)
 
     publish_tracking_img(pSLAM->GetCurrentFrame(), msg_time);
     publish_tracked_points(pSLAM->GetTrackedMapPoints(), msg_time);
-    publish_person_points(pSLAM->Cobain(mask), msg_time);
+    // pSlam->Cobain2(mask);
+    publish_person_points(pSLAM->GetAllMapPoints(), msg_time);
     publish_all_points(pSLAM->GetAllMapPoints(), msg_time);
     publish_kf_markers(pSLAM->GetAllKeyframePoses(), msg_time);
 
@@ -238,12 +239,23 @@ void publish_tracked_points(std::vector<ORB_SLAM3::MapPoint*> tracked_points, ro
     tracked_mappoints_pub.publish(cloud);
 }
 
-void publish_person_points(std::vector<ORB_SLAM3::MapPoint*> person_points, ros::Time msg_time)
-{
-    
-    // std::cout<<"disini gitu?"<<std::endl;
+void publish_person_points(std::vector<ORB_SLAM3::MapPoint*> map_points, ros::Time msg_time)
+{   
+    std::vector<ORB_SLAM3::MapPoint*> person_points;
+    int x = 0;
+    for (int i = 0; i < map_points.size(); i++)
+    {
+        if (map_points[i])
+        {
+            bool chk = map_points[i]->isPerson();
+            if (chk){
+                person_points.push_back(map_points[i]);
+                x++;
+            }
+        }
+    }
     sensor_msgs::PointCloud2 cloud = mappoint_to_pointcloud(person_points, msg_time);
-    // std::cout<<"iya disitu?"<<std::endl;
+    std::cout<<x<<std::endl;
     tracked_personpoints_pub.publish(cloud);
 }
 
@@ -298,7 +310,7 @@ sensor_msgs::PointCloud2 mappoint_to_pointcloud(std::vector<ORB_SLAM3::MapPoint*
 
     if (map_points.size() == 0)
     {
-        std::cout << "Map point vector is empty!" << std::endl;
+        // std::cout << "Map point vector is empty!" << std::endl;
     }
 
     sensor_msgs::PointCloud2 cloud;

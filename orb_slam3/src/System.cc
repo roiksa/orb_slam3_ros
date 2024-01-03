@@ -1645,5 +1645,34 @@ std::vector<MapPoint*> System::Cobain(cv::Mat mask){
     return personMPs;
 }
 
+void System::Cobain2(cv::Mat mask){
+    unique_lock<mutex> lock(mMutexState);
+    float imageScale = GetImageScale();
+    if(imageScale != 1.f)
+    {
+        int imWidth = mask.cols / imageScale;
+        int imHeight = mask.rows / imageScale;
+        cv::resize(mask, mask, cv::Size(imWidth, imHeight));
+    }
+    int x = 0;
+    if(mTrackingState==Tracking::OK){
+        for (int i = 0; i < mTrackedKeyPoints.size(); i++){
+            MapPoint* pMP = mTrackedMapPoints[i];
+            if(pMP){
+                if(!mOutlierPoints[i]){
+                    int px = (int)(mTrackedKeyPoints[i].pt.x / imageScale);
+                    int py = (int)(mTrackedKeyPoints[i].pt.y / imageScale);
+
+                    if((int)mask.at<uchar>(py,px)!=0){
+                        pMP->SetPersonFlag();
+                        x++;
+                    }
+                }
+            }
+        }
+    }
+    std::cout<<"Marked "<<x<<" point out of"<<mTrackedKeyPoints.size()<<std::endl;
+}
+
 } //namespace ORB_SLAM
 

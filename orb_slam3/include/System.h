@@ -195,6 +195,7 @@ public:
 
     float GetImageScale();
     std::vector<MapPoint*> Cobain(cv::Mat mask);
+    void Cobain2(cv::Mat mask);
 
 #ifdef REGISTER_TIMES
     void InsertRectTime(double& time);

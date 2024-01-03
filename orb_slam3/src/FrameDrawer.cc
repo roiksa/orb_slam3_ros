@@ -40,7 +40,7 @@ cv::Mat FrameDrawer::DrawFrame(float imageScale)
     vector<cv::KeyPoint> vIniKeys; // Initialization: KeyPoints in reference frame
     vector<int> vMatches; // Initialization: correspondeces with reference keypoints
     vector<cv::KeyPoint> vCurrentKeys; // KeyPoints in current frame
-    vector<bool> vbVO, vbMap; // Tracked MapPoints in current frame
+    vector<bool> vbVO, vbMap, vbPerson; // Tracked MapPoints in current frame
     vector<pair<cv::Point2f, cv::Point2f> > vTracks;
     int state; // Tracking state
     vector<float> vCurrentDepth;
@@ -56,6 +56,7 @@ cv::Mat FrameDrawer::DrawFrame(float imageScale)
     map<long unsigned int, cv::Point2f> mMatchedInImage;
 
     cv::Scalar standardColor(0,255,0);
+    cv::Scalar personColor(0,0,255);
     cv::Scalar odometryColor(255,0,0);
 
     //Copy variables within scoped mutex
@@ -79,6 +80,7 @@ cv::Mat FrameDrawer::DrawFrame(float imageScale)
             vCurrentKeys = mvCurrentKeys;
             vbVO = mvbVO;
             vbMap = mvbMap;
+            vbPerson = mvbPerson;
 
             currentFrame = mCurrentFrame;
             vpLocalMap = mvpLocalMap;
@@ -180,15 +182,26 @@ cv::Mat FrameDrawer::DrawFrame(float imageScale)
 
                 // This is a match to a MapPoint in the map
                 if(vbMap[i])
-                {
-                    cv::rectangle(im,pt1,pt2,standardColor);
-                    cv::circle(im,point,2,standardColor,-1);
+                {   if(vbPerson[i]){
+                        cv::rectangle(im,pt1,pt2,personColor);
+                        cv::circle(im,point,2,personColor,-1);
+                        }
+                    else{
+                        cv::rectangle(im,pt1,pt2,standardColor);
+                        cv::circle(im,point,2,standardColor,-1);
+                    }
                     mnTracked++;
                 }
                 else // This is match to a "visual odometry" MapPoint created in the last frame
                 {
-                    cv::rectangle(im,pt1,pt2,odometryColor);
-                    cv::circle(im,point,2,odometryColor,-1);
+                    if(vbPerson[i]){
+                        cv::rectangle(im,pt1,pt2,personColor);
+                        cv::circle(im,point,2,personColor,-1);
+                        }
+                    else{
+                        cv::rectangle(im,pt1,pt2,odometryColor);
+                        cv::circle(im,point,2,odometryColor,-1);
+                    }
                     mnTrackedVO++;
                 }
             }
@@ -386,6 +399,7 @@ void FrameDrawer::Update(Tracking *pTracker)
 
     mvbVO = vector<bool>(N,false);
     mvbMap = vector<bool>(N,false);
+    mvbPerson = vector<bool>(N,false);
     mbOnlyTracking = pTracker->mbOnlyTracking;
 
     //Variables for the new visualization
@@ -423,6 +437,9 @@ void FrameDrawer::Update(Tracking *pTracker)
                         mvbVO[i]=true;
 
                     mmMatchedInImage[pMP->mnId] = mvCurrentKeys[i].pt;
+                    if(pMP->isPerson()){
+                        mvbPerson[i]=true;
+                    }
                 }
                 else
                 {

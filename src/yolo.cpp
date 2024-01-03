@@ -232,8 +232,8 @@ std::vector<YoloResult> Yolo::ProcessImage(const cv::Mat img){
     std::vector<int> nmsResult;
     cv::dnn::NMSBoxes(boxes, confidences, _classTreshold, _nmsTreshold, nmsResult);
     cv::Size downsampledSize = cv::Size(maskW, maskH);
-    std::cout<<maskW<<" "<<maskH<<std::endl;
-    std::cout<<output1.cols<<" "<<output1.rows<<std::endl;
+    // std::cout<<maskW<<" "<<maskH<<std::endl;
+    // std::cout<<output1.cols<<" "<<output1.rows<<std::endl;
     std::vector<cv::Range> roiRangs = { cv::Range(0, 1), cv::Range::all(),
                                          cv::Range(0, downsampledSize.height), cv::Range(0, downsampledSize.width) };
     cv::Mat tempMask = output1(roiRangs).clone();
@@ -242,7 +242,7 @@ std::vector<YoloResult> Yolo::ProcessImage(const cv::Mat img){
     // std::cout<<"3"<<std::endl;
     for (int i = 0; i < nmsResult.size(); ++i)
     {
-        std::cout<<i<<std::endl;
+        // std::cout<<i<<std::endl;
         int idx = nmsResult[i];
         boxes[idx] = boxes[idx] & cv::Rect(0, 0, img.cols, img.rows);
         YoloResult result = { classIds[idx] ,confidences[idx] ,boxes[idx] };

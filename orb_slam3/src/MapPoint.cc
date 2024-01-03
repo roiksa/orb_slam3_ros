@@ -635,4 +635,13 @@ void MapPoint::PostLoad(map<long unsigned int, KeyFrame*>& mpKFid, map<long unsi
     mBackupObservationsId2.clear();
 }
 
+void MapPoint::SetPersonFlag(){
+    unique_lock<mutex> lock(mMutexFeatures);
+    mbPerson = true;
+}
+
+bool MapPoint::isPerson(){
+    unique_lock<mutex> lock(mMutexFeatures);
+    return mbPerson;
+}
 } //namespace ORB_SLAM

@@ -68,6 +68,7 @@ class YoloNode{
             resPub.publish(resImgMsg);
 
             Sophus::SE3f Tcw = pSLAM->TrackMonocular(cv_ptr->image, cv_ptr->header.stamp.toSec());
+            pSLAM->Cobain2(mask);
             // std::cout<<"tracking"<<std::endl;
             ros::Time msg_time = msg->header.stamp;
             publish_topics_seg(msg_time, mask);

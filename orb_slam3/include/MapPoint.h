@@ -131,6 +131,7 @@ public:
     void SetBadFlag();
     bool isBad();
 
+
     void Replace(MapPoint* pMP);    
     MapPoint* GetReplaced();
 
@@ -159,6 +160,10 @@ public:
 
     void PreSave(set<KeyFrame*>& spKF,set<MapPoint*>& spMP);
     void PostLoad(map<long unsigned int, KeyFrame*>& mpKFid, map<long unsigned int, MapPoint*>& mpMPid);
+
+
+    void SetPersonFlag();
+    bool isPerson();
 
 public:
     long unsigned int mnId;
@@ -248,6 +253,8 @@ protected:
      std::mutex mMutexPos;
      std::mutex mMutexFeatures;
      std::mutex mMutexMap;
+
+     bool mbPerson = false;
 
 };
 
