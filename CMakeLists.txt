@@ -180,6 +180,18 @@ target_link_libraries(ros_mono_yolo
   "${ONNXRUNTIME_DIR}/libonnxruntime.so"
 )
 
+add_executable(val 
+  src/val.cpp
+  src/yolo.cpp
+)
+TARGET_INCLUDE_DIRECTORIES(val PRIVATE "${ONNXRUNTIME_DIR}/include")
+target_link_libraries(val
+  ${OpenCV_LIBS}
+  ${catkin_LIBRARIES}
+  "${ONNXRUNTIME_DIR}/libonnxruntime.so"
+)
+
+
 # ## ROS node
 # add_executable(ros_mono
 # src/ros_mono.cc

@@ -158,7 +158,9 @@ Yolo::Yolo(const std::string& modelPath){
 }
 
 std::vector<YoloResult> Yolo::ProcessImage(const cv::Mat img){
+    count++;
     // std::cout<<"Img received"<<std::endl;
+    auto start = std::chrono::high_resolution_clock::now();
     cv::Mat newImage;
     const bool& auto_=false;
     const bool& scaleFill=false;
@@ -170,6 +172,11 @@ std::vector<YoloResult> Yolo::ProcessImage(const cv::Mat img){
 	std::vector<Ort::Value> outputTensors;
     Ort::MemoryInfo _OrtMemoryInfo(Ort::MemoryInfo::CreateCpu(OrtAllocatorType::OrtDeviceAllocator, OrtMemType::OrtMemTypeCPUOutput));
     inputTensors.push_back(Ort::Value::CreateTensor<float>(_OrtMemoryInfo, (float*)blob.data, inputTensorLength, _inputTensorShape.data(), _inputTensorShape.size()));
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto durationPreProc = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    avgPre = avgPre+((durationPreProc.count()-avgPre)/count);
+    
+    start = std::chrono::high_resolution_clock::now();
     outputTensors = _session->Run(Ort::RunOptions{ nullptr },
 		_inputNodeNames.data(),
 		inputTensors.data(),
@@ -177,6 +184,12 @@ std::vector<YoloResult> Yolo::ProcessImage(const cv::Mat img){
 		_outputNodeNames.data(),
 		_outputNodeNames.size()
 	);
+
+    stop = std::chrono::high_resolution_clock::now();
+    auto durationInference = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    avgInf = avgInf+((durationInference.count()-avgInf)/count);
+
+    start = std::chrono::high_resolution_clock::now();
     // std::cout<<"Processing result"<<std::endl;
     int classNamesNum = _className.size();
     std::vector<int64_t> output0TensorShape = outputTensors[0].GetTensorTypeAndShapeInfo().GetShape();
@@ -185,13 +198,7 @@ std::vector<YoloResult> Yolo::ProcessImage(const cv::Mat img){
     cv::Mat output0 = cv::Mat(cv::Size((int)output0TensorShape[2], (int)output0TensorShape[1]), CV_32F, all_data).t();
     std::vector<int> maskSize = { 1,(int)output1TensorShape[1],(int)output1TensorShape[2],(int)output1TensorShape[3] };
     cv::Mat output1 = cv::Mat(maskSize, CV_32F, outputTensors[1].GetTensorMutableData<float>());
-    std::cout<<output1.cols<<" "<<output1.rows<<std::endl;
-    std::cout<<output0.size()<<std::endl;
-    std::cout<<output1.size()<<std::endl;
-    std::vector<YoloResult> output;
-    // if(output1.rows<=0||output1.cols<=0){
-    //     return output;
-    // }
+    
     int maskFeaturesNum = output1TensorShape[1];
     int maskW = output1TensorShape[2];
     int maskH = output1TensorShape[3];
@@ -205,14 +212,15 @@ std::vector<YoloResult> Yolo::ProcessImage(const cv::Mat img){
     int rows = output0.rows;    
     float* pdata = (float*)output0.data;
    
-    // std::cout<<"PostProcess "<<rows<<std::endl;
+    // std::cout<<"PostProcess"<<std::endl;
     for(int r = 0; r<rows; r++){
         cv::Mat scores(1, classNamesNum, CV_32FC1, pdata+4);
         cv::Point classId;
         double maxConf;
         minMaxLoc(scores, 0, &maxConf, 0, &classId);
         if(maxConf >= _classTreshold){
-            if(classId.x == 0){
+            if(classId.x == 0)
+            {	
                 masks.push_back(std::vector<float>(pdata+4+classNamesNum, pdata+dataWidth));
                 classIds.push_back(classId.x);
                 confidences.push_back(maxConf);
@@ -231,27 +239,26 @@ std::vector<YoloResult> Yolo::ProcessImage(const cv::Mat img){
     // std::cout<<"NMS"<<std::endl;
     std::vector<int> nmsResult;
     cv::dnn::NMSBoxes(boxes, confidences, _classTreshold, _nmsTreshold, nmsResult);
+    stop = std::chrono::high_resolution_clock::now();
+    auto durationPostProc = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    avgPost = avgPost+((durationPostProc.count()-avgPost)/count);
+
+
     cv::Size downsampledSize = cv::Size(maskW, maskH);
-    // std::cout<<maskW<<" "<<maskH<<std::endl;
-    // std::cout<<output1.cols<<" "<<output1.rows<<std::endl;
     std::vector<cv::Range> roiRangs = { cv::Range(0, 1), cv::Range::all(),
                                          cv::Range(0, downsampledSize.height), cv::Range(0, downsampledSize.width) };
     cv::Mat tempMask = output1(roiRangs).clone();
-    // std::cout<<"2"<<std::endl;
     cv::Mat proto = tempMask.reshape(0, { maskFeaturesNum, downsampledSize.width * downsampledSize.height });
-    // std::cout<<"3"<<std::endl;
+    std::vector<YoloResult> output;
     for (int i = 0; i < nmsResult.size(); ++i)
     {
-        // std::cout<<i<<std::endl;
         int idx = nmsResult[i];
         boxes[idx] = boxes[idx] & cv::Rect(0, 0, img.cols, img.rows);
         YoloResult result = { classIds[idx] ,confidences[idx] ,boxes[idx] };
         GetMask(cv::Mat(masks[idx]).t(), proto, img.cols, img.rows, boxes[idx], result.mask,
             _netWidth, _netHeight, maskW, maskH, maskFeaturesNum);
-        // std::cout<<i<<"1"<<std::endl;
         output.push_back(result);
     }
-    // std::cout<<"done"<<std::endl;
     return output;
 }
 
@@ -327,6 +334,53 @@ cv::Mat Yolo::DrawImage(std::vector<YoloResult> results, const cv::Mat img){
 
     cvtColor(mask,mask,cv::COLOR_BGR2GRAY);
     return mask;
+}
+
+void Yolo::Save(std::vector<YoloResult> results, cv::Mat& img, std::ofstream& jsonFile, std::string fName){
+    int class90[80] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 27, 28, 31, 32, 33, 34,
+        35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
+        64, 65, 67, 70, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 90};
+
+    for (const auto& res : results) {
+        cv::Mat mask = img.clone()*0;
+        float left = res.bbox.x;
+        float top = res.bbox.y;
+        float width = res.bbox.width;
+        float height = res.bbox.height;
+
+        if (res.mask.rows && res.mask.cols > 0) {
+            mask(res.bbox).setTo(cv::Scalar(255.0,255.0,255.0), res.mask);
+        }
+        cvtColor(mask,mask,cv::COLOR_BGR2GRAY);
+        mask = mask.reshape(1,1);
+        // std::cout<<(int)mask.at<uchar>(0,2403)<<std::endl;
+        std::stringstream labelStream;
+        std::stringstream rleStream;
+        int total =0;
+        for(int i = 0;i<mask.cols;i++){
+            int count = 1;
+            if((int)mask.at<uchar>(0,i)!=0&&i==0){
+                rleStream<<0<<",";
+                continue;
+            }
+            while(i<mask.cols -1 && (int)mask.at<uchar>(0,i)==(int)mask.at<uchar>(0,i+1)){
+                count++;
+                i++;
+            }
+            rleStream<<count;
+            if(i<mask.cols-1){
+                rleStream<<",";
+            }
+            total = total+count;
+        }
+        std::string rle = rleStream.str();
+        // std::cout<<class90[res.classIds]<<","<<_className[res.classIds]<<std::endl;
+        // labelStream << "{\"image_id\": "<<std::stoi(fName)<<",\"bbox\":["<<left<<","<<top<<","<<width<<","<<height<<"],\"category_id\": "<<res.classIds<<",\"score\": "<<res.conf<<"},";
+        labelStream << "{\"image_id\": "<<std::stoi(fName)<<",\"segmentation\": {\"counts\": ["<<rle<<"],\"size\": ["<<mask.rows<<","<<mask.cols<<"]}"<<",\"bbox\":["<<left<<","<<top<<","<<width<<","<<height<<"],\"category_id\": "<<class90[res.classIds]<<",\"score\": "<<res.conf<<"},";
+        std::string label = labelStream.str();
+        jsonFile<<label;
+    }
+
 }
 
 cv::Rect_<float> Yolo::scale_boxes(const cv::Size& img1_shape, cv::Rect_<float>& box, const cv::Size& img0_shape) {
@@ -406,4 +460,8 @@ void Yolo::scale_image(cv::Mat& scaled_mask, const cv::Mat& resized_mask, const 
     cv::Rect clipped_rect(left, top, right - left, bottom - top);
     cv::Mat clipped_mask = resized_mask(clipped_rect);
     cv::resize(clipped_mask, scaled_mask, im0_shape);
+}
+
+void Yolo::ShowTime(){
+    std::cout<<"PreProcess Time : "<<avgPre/1000<<"ms | Inference Time : "<<avgInf/1000<<"ms | PostProcess Time : "<<avgPost/1000<<"ms"<<std::endl;
 }

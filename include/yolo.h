@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <memory>
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -27,6 +28,8 @@ class Yolo{
         Yolo(const std::string& modelPath);
         std::vector<YoloResult> ProcessImage(const cv::Mat img);
         cv::Mat DrawImage(std::vector<YoloResult> result, const cv::Mat img);
+        void Save(std::vector<YoloResult> result, cv::Mat& img, std::ofstream& jsonFile, std::string fName);
+        void ShowTime();
 
         std::vector<std::string> _className = {
 		"person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
@@ -74,6 +77,10 @@ class Yolo{
         float _classTreshold = 0.25;
         float _nmsTreshold = 0.45;
         float _maskTreshold = 0.5;
+        float avgInf = 0;
+        float avgPre = 0;
+        float avgPost = 0;
+        int count = 0;
 
         std::vector<cv::Scalar> _color;
 	    

@@ -33,7 +33,7 @@ class YoloNode{
             bool enable_pangolin;
             nodeHandler->param<bool>(node_name + "/enable_pangolin", enable_pangolin, true);
 
-            yoloHandler = new Yolo("/home/benyamin/catkin_ws/src/orb_slam3_ros/yolov8m-seg.onnx");
+            yoloHandler = new Yolo("/home/benyamin/catkin_ws/src/orb_slam3_ros/yolov8s-seg.onnx");
 
             // Create SLAM system. It initializes all system threads and gets ready to process frames.
             sensor_type = ORB_SLAM3::System::MONOCULAR;
