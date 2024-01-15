@@ -33,7 +33,7 @@ class YoloNode{
             bool enable_pangolin;
             nodeHandler->param<bool>(node_name + "/enable_pangolin", enable_pangolin, true);
 
-            yoloHandler = new Yolo("/home/benyamin/catkin_ws/src/orb_slam3_ros/yolov8s-seg.onnx");
+            yoloHandler = new Yolo("/home/benyamin/catkin_ws/src/orb_slam3_ros/yolov8n-seg.onnx");
 
             // Create SLAM system. It initializes all system threads and gets ready to process frames.
             sensor_type = ORB_SLAM3::System::MONOCULAR;
@@ -45,12 +45,17 @@ class YoloNode{
             setup_services(*nodeHandler, node_name);
             resPub = itHandler->advertise("/seg_image",1);
         }
+
+        float avgProc = 0;
+        int count = 0;
     
     private:
         ros::Subscriber imgSub;
         image_transport::Publisher resPub;
 
         void ImgCallback(const sensor_msgs::ImageConstPtr& msg){
+            count++;
+            auto start = std::chrono::high_resolution_clock::now();
             cv_bridge::CvImageConstPtr cv_ptr;
             try{
                 cv_ptr = cv_bridge::toCvShare(msg);
@@ -73,6 +78,9 @@ class YoloNode{
             ros::Time msg_time = msg->header.stamp;
             publish_topics_seg(msg_time, mask);
             // std::cout<<"publishing"<<std::endl;
+            auto stop = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+            avgProc = avgProc+((duration.count()-avgProc)/count);
         }
 };
 
@@ -91,7 +99,10 @@ int main(int argc, char **argv){
     YoloNode node = YoloNode(&nodeHandler, &itHandler);
 
     ros::spin();
+    std::cout<<"Average processing time : "<<node.avgProc/1000<<"ms"<<std::endl;
     pSLAM->Shutdown();
+    pSLAM->SaveTrajectoryEuRoC("CameraTrajectory.txt");
+    pSLAM->SaveKeyFrameTrajectoryEuRoC("KeyFrameTrajectory.txt");
     ros::shutdown();
 
     return 0;

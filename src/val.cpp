@@ -15,7 +15,8 @@ int main(int argc, char **argv){
     cv::glob("/home/benyamin/COCO/coco/val2017/*.jpg", fn, true);
 
     size_t count = fn.size(); //number of png files in images folder
-    for (size_t i=0; i<5; i++){
+    for (size_t i=0; i<count; i++){
+        std::cout<<"Processing "<<i<<" out of "<<count<<std::endl;
         cv::Mat img = cv::imread(fn[i]);
         boost::filesystem::path fName(fn[i]);
         std::vector<YoloResult> result = yoloHandler.ProcessImage(img);

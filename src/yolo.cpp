@@ -11,6 +11,7 @@ void letterbox(const cv::Mat& image,
     bool scaleUp, int stride
 ) {
     cv::Size shape = image.size();
+    std::cout<<"letterbox begin"<<std::endl;
     float r = std::min(static_cast<float>(newShape.height) / static_cast<float>(shape.height),
         static_cast<float>(newShape.width) / static_cast<float>(shape.width));
     if (!scaleUp)
@@ -60,7 +61,7 @@ void letterbox(const cv::Mat& image,
     if (color == cv::Scalar()) {
         color = cv::Scalar(DEFAULT_LETTERBOX_PAD_VALUE, DEFAULT_LETTERBOX_PAD_VALUE, DEFAULT_LETTERBOX_PAD_VALUE);
     }
-
+    std::cout<<"letterbox done"<<std::endl;
     cv::copyMakeBorder(outImage, outImage, top, bottom, left, right, cv::BORDER_CONSTANT, color);
 
 }
@@ -78,7 +79,7 @@ Yolo::Yolo(const std::string& modelPath){
         OrtCUDAProviderOptions cudaOption;
         sessionOptions.AppendExecutionProvider_CUDA(cudaOption);    
     }
-    sessionOptions.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_EXTENDED);
+    sessionOptions.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
     _session = new Ort::Session(_env, modelPath.c_str(), sessionOptions);
     Ort::AllocatorWithDefaultOptions allocator;
 
@@ -167,16 +168,22 @@ std::vector<YoloResult> Yolo::ProcessImage(const cv::Mat img){
     letterbox(img, newImage,_netShape, cv::Scalar(), auto_, scaleFill, true, 32);
     cv::Mat blob = cv::dnn::blobFromImage(newImage, 1/255.0, _netShape, cv::Scalar(0,0,0), true, false);
     // std::cout<<"Infering"<<std::endl;
+    std::cout<< _inputTensorShape.size()<<std::endl;
     int64_t inputTensorLength = VectorProduct(_inputTensorShape);
+    // std::cout<<"product"<<std::endl;
 	std::vector<Ort::Value> inputTensors;
 	std::vector<Ort::Value> outputTensors;
     Ort::MemoryInfo _OrtMemoryInfo(Ort::MemoryInfo::CreateCpu(OrtAllocatorType::OrtDeviceAllocator, OrtMemType::OrtMemTypeCPUOutput));
     inputTensors.push_back(Ort::Value::CreateTensor<float>(_OrtMemoryInfo, (float*)blob.data, inputTensorLength, _inputTensorShape.data(), _inputTensorShape.size()));
+    
+    // std::cout<<"creating input tensor"<<std::endl;
     auto stop = std::chrono::high_resolution_clock::now();
     auto durationPreProc = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
     avgPre = avgPre+((durationPreProc.count()-avgPre)/count);
-    
     start = std::chrono::high_resolution_clock::now();
+    
+    // std::cout<<_inputNodeNames.size()<<";"<<inputTensors.size()<<";"<<_outputNodeNames.size()<<std::endl;
+    try{
     outputTensors = _session->Run(Ort::RunOptions{ nullptr },
 		_inputNodeNames.data(),
 		inputTensors.data(),
@@ -184,7 +191,11 @@ std::vector<YoloResult> Yolo::ProcessImage(const cv::Mat img){
 		_outputNodeNames.data(),
 		_outputNodeNames.size()
 	);
+    } catch(Ort::Exception e){
+        std::cout<<e.what()<<std::endl;
+    }
 
+    // std::cout<<"Stopping clock"<<std::endl;
     stop = std::chrono::high_resolution_clock::now();
     auto durationInference = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
     avgInf = avgInf+((durationInference.count()-avgInf)/count);
@@ -264,6 +275,7 @@ std::vector<YoloResult> Yolo::ProcessImage(const cv::Mat img){
 
 void Yolo::GetMask(const cv::Mat &masks_features, const cv::Mat& proto, int imWidth, const int imHeight, const cv::Rect bound, cv::Mat& mask_out, int iw, int ih, int mw, int mh, int& masks_features_num)
 {
+    // std::cout<<"test"<<std::endl;
     cv::Size img0_shape = cv::Size(imWidth, imHeight);
     cv::Size img1_shape = cv::Size(iw, ih);
     cv::Size downsampled_size = cv::Size(mw, mh);
