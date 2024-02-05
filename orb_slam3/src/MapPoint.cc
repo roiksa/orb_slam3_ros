@@ -636,8 +636,16 @@ void MapPoint::PostLoad(map<long unsigned int, KeyFrame*>& mpKFid, map<long unsi
 }
 
 void MapPoint::SetPersonFlag(){
-    unique_lock<mutex> lock(mMutexFeatures);
-    mbPerson = true;
+    {
+        unique_lock<mutex> lock(mMutexFeatures);
+        if(++mnCountPerson == 3){
+            mbPerson = true;
+        }
+    }
+    if(mnCountPerson == 3){
+        mpMap->AddPersonPoint(this);
+        SetBadFlag();
+    }
 }
 
 bool MapPoint::isPerson(){

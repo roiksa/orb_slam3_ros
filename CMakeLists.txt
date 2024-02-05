@@ -192,25 +192,47 @@ target_link_libraries(val
 )
 
 
-# ## ROS node
-# add_executable(ros_mono
-# src/ros_mono.cc
-# src/common.cc
-# )
-# target_link_libraries(ros_mono
-# ${PROJECT_NAME}
-# ${catkin_LIBRARIES}
-# )
+## ROS node
+add_executable(ros_mono
+src/ros_mono.cc
+src/common.cc
+)
+target_link_libraries(ros_mono
+${PROJECT_NAME}
+${catkin_LIBRARIES}
+)
 
-# ## ROS node
-# add_executable(ros_mono_inertial 
-#   src/ros_mono_inertial.cc
-#   src/common.cc
-# )
-# target_link_libraries(ros_mono_inertial 
-#   ${PROJECT_NAME}
-#   ${catkin_LIBRARIES}
-# )
+## ROS node
+add_executable(rgbd_tum
+src/rgbd_tum.cc
+src/common.cc
+)
+target_link_libraries(rgbd_tum
+${PROJECT_NAME}
+${catkin_LIBRARIES}
+)
+
+## ROS node
+add_executable(rgbd_tum_yolo
+src/rgbd_tum_yolo.cc
+src/yolo.cpp
+)
+TARGET_INCLUDE_DIRECTORIES(rgbd_tum_yolo PRIVATE "${ONNXRUNTIME_DIR}/include")
+target_link_libraries(rgbd_tum_yolo
+${PROJECT_NAME}
+${catkin_LIBRARIES}
+"${ONNXRUNTIME_DIR}/libonnxruntime.so"
+)
+
+## ROS node
+add_executable(ros_mono_inertial 
+  src/ros_mono_inertial.cc
+  src/common.cc
+)
+target_link_libraries(ros_mono_inertial 
+  ${PROJECT_NAME}
+  ${catkin_LIBRARIES}
+)
 
 # ## ROS node
 # add_executable(ros_stereo 

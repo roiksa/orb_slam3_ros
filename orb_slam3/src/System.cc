@@ -373,6 +373,8 @@ Sophus::SE3f System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const
     mTrackingState = mpTracker->mState;
     mTrackedMapPoints = mpTracker->mCurrentFrame.mvpMapPoints;
     mTrackedKeyPointsUn = mpTracker->mCurrentFrame.mvKeysUn;
+    mTrackedKeyPoints = mpTracker->mCurrentFrame.mvKeys;
+    mOutlierPoints = mpTracker->mCurrentFrame.mvbOutlier;
     return Tcw;
 }
 
@@ -1570,6 +1572,12 @@ vector<MapPoint*> System::GetAllMapPoints()
     return pActiveMap->GetAllMapPoints();
 }
 
+vector<MapPoint*> System::GetAllPersonPoints()
+{
+    Map* pActiveMap = mpAtlas->GetCurrentMap();
+    return pActiveMap->GetAllPersonPoints();
+}
+
 vector<Sophus::SE3f> System::GetAllKeyframePoses()
 {
     vector<KeyFrame*> vpKFs = mpAtlas->GetAllKeyFrames();
@@ -1664,14 +1672,14 @@ void System::Cobain2(cv::Mat mask){
                     int py = (int)(mTrackedKeyPoints[i].pt.y / imageScale);
 
                     if((int)mask.at<uchar>(py,px)!=0){
-                        pMP->SetPersonFlag();
-                        x++;
+                        if(!pMP->isPerson()){
+                            pMP->SetPersonFlag();
+                            }
                     }
                 }
             }
         }
     }
-    std::cout<<"Marked "<<x<<" point out of"<<mTrackedKeyPoints.size()<<std::endl;
 }
 
 } //namespace ORB_SLAM

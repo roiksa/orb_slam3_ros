@@ -11,7 +11,7 @@ void letterbox(const cv::Mat& image,
     bool scaleUp, int stride
 ) {
     cv::Size shape = image.size();
-    std::cout<<"letterbox begin"<<std::endl;
+    // std::cout<<"letterbox begin"<<std::endl;
     float r = std::min(static_cast<float>(newShape.height) / static_cast<float>(shape.height),
         static_cast<float>(newShape.width) / static_cast<float>(shape.width));
     if (!scaleUp)
@@ -61,7 +61,7 @@ void letterbox(const cv::Mat& image,
     if (color == cv::Scalar()) {
         color = cv::Scalar(DEFAULT_LETTERBOX_PAD_VALUE, DEFAULT_LETTERBOX_PAD_VALUE, DEFAULT_LETTERBOX_PAD_VALUE);
     }
-    std::cout<<"letterbox done"<<std::endl;
+    // std::cout<<"letterbox done"<<std::endl;
     cv::copyMakeBorder(outImage, outImage, top, bottom, left, right, cv::BORDER_CONSTANT, color);
 
 }
@@ -168,7 +168,7 @@ std::vector<YoloResult> Yolo::ProcessImage(const cv::Mat img){
     letterbox(img, newImage,_netShape, cv::Scalar(), auto_, scaleFill, true, 32);
     cv::Mat blob = cv::dnn::blobFromImage(newImage, 1/255.0, _netShape, cv::Scalar(0,0,0), true, false);
     // std::cout<<"Infering"<<std::endl;
-    std::cout<< _inputTensorShape.size()<<std::endl;
+    // std::cout<< _inputTensorShape.size()<<std::endl;
     int64_t inputTensorLength = VectorProduct(_inputTensorShape);
     // std::cout<<"product"<<std::endl;
 	std::vector<Ort::Value> inputTensors;
@@ -309,6 +309,7 @@ void Yolo::GetMask(const cv::Mat &masks_features, const cv::Mat& proto, int imWi
 
 cv::Mat Yolo::DrawImage(std::vector<YoloResult> results, const cv::Mat img){
     cv::Mat mask = img.clone()*0.0;
+    // cv::Mat mask = img.clone();
 
     // int radius = 5;
     // bool drawLines = true;
@@ -338,7 +339,6 @@ cv::Mat Yolo::DrawImage(std::vector<YoloResult> results, const cv::Mat img){
         // cv::rectangle(img, rect_to_fill, _color[res.classIds], -1);
         // cv::putText(img, label, cv::Point(left - 1.5, top - 2.5), cv::FONT_HERSHEY_SIMPLEX, 0.6, text_color, 2);
 
-        // Check if keypoints are available
     }
 
     // Combine the image and mask
@@ -388,7 +388,7 @@ void Yolo::Save(std::vector<YoloResult> results, cv::Mat& img, std::ofstream& js
         std::string rle = rleStream.str();
         // std::cout<<class90[res.classIds]<<","<<_className[res.classIds]<<std::endl;
         // labelStream << "{\"image_id\": "<<std::stoi(fName)<<",\"bbox\":["<<left<<","<<top<<","<<width<<","<<height<<"],\"category_id\": "<<res.classIds<<",\"score\": "<<res.conf<<"},";
-        labelStream << "{\"image_id\": "<<std::stoi(fName)<<",\"segmentation\": {\"counts\": ["<<rle<<"],\"size\": ["<<mask.rows<<","<<mask.cols<<"]}"<<",\"bbox\":["<<left<<","<<top<<","<<width<<","<<height<<"],\"category_id\": "<<class90[res.classIds]<<",\"score\": "<<res.conf<<"},";
+        labelStream << "{\"image_id\": "<<std::string(fName)<<",\"segmentation\": {\"counts\": ["<<rle<<"],\"size\": ["<<mask.rows<<","<<mask.cols<<"]}"<<",\"bbox\":["<<left<<","<<top<<","<<width<<","<<height<<"],\"category_id\": "<<class90[res.classIds]<<",\"score\": "<<res.conf<<"},";
         std::string label = labelStream.str();
         jsonFile<<label;
     }

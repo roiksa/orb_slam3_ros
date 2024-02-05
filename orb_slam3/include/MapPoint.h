@@ -255,6 +255,7 @@ protected:
      std::mutex mMutexMap;
 
      bool mbPerson = false;
+     int mnCountPerson = 0;
 
 };
 

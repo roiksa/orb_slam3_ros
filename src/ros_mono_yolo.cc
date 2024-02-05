@@ -100,9 +100,9 @@ int main(int argc, char **argv){
 
     ros::spin();
     std::cout<<"Average processing time : "<<node.avgProc/1000<<"ms"<<std::endl;
-    pSLAM->Shutdown();
     pSLAM->SaveTrajectoryEuRoC("CameraTrajectory.txt");
     pSLAM->SaveKeyFrameTrajectoryEuRoC("KeyFrameTrajectory.txt");
+    pSLAM->Shutdown();
     ros::shutdown();
 
     return 0;

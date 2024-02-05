@@ -46,6 +46,7 @@ Map::~Map()
     //TODO: erase all points from memory
     mspMapPoints.clear();
 
+    mspPersonPoints.clear();
     //TODO: erase all keyframes from memory
     mspKeyFrames.clear();
 
@@ -81,6 +82,12 @@ void Map::AddMapPoint(MapPoint *pMP)
 {
     unique_lock<mutex> lock(mMutexMap);
     mspMapPoints.insert(pMP);
+}
+
+void Map::AddPersonPoint(MapPoint *pMP)
+{
+    unique_lock<mutex> lock(mMutexMap);
+    mspPersonPoints.insert(pMP);
 }
 
 void Map::SetImuInitialized()
@@ -154,6 +161,12 @@ vector<MapPoint*> Map::GetAllMapPoints()
 {
     unique_lock<mutex> lock(mMutexMap);
     return vector<MapPoint*>(mspMapPoints.begin(),mspMapPoints.end());
+}
+
+vector<MapPoint*> Map::GetAllPersonPoints()
+{
+    unique_lock<mutex> lock(mMutexMap);
+    return vector<MapPoint*>(mspPersonPoints.begin(),mspPersonPoints.end());
 }
 
 long unsigned int Map::MapPointsInMap()
